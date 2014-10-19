@@ -28,7 +28,9 @@ optional arguments:
                         Number of Pages
 ```
 2.GUI
+```
 tgrab-gui
+```
 ##Licence
 GNU GPL
 ##Acknowledgements
