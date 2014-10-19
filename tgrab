@@ -1,0 +1,53 @@
+#!/usr/bin/env python2
+# -*- coding: utf-8 -*-
+import json,urllib,argparse,sys,os
+
+parser = argparse.ArgumentParser(description='Tumblr Image Downloader A.K.A tgrab by @UKaveenR Twitter (H4ckC0d3 on Freenode IRC) ')
+parser.add_argument('-n','--name', help='Blog Name', required=True)
+parser.add_argument('-p','--pages', help='Number of Pages', default = 1, required=False)
+
+args = vars(parser.parse_args())
+
+try:
+	pages = int(args["pages"])
+except:
+	print("Input Error")
+	sys.exit()
+
+
+for page in range(1,pages+1):
+	try:
+		if page == 1:
+			html = urllib.urlopen("http://"+args["name"]+".tumblr.com/api/read/json").read()
+		else:
+			html = urllib.urlopen("http://"+args["name"]+".tumblr.com/api/read/json?start="+str((page - 1)*20)).read()
+	except:
+		print("error reciving data")
+		sys.exit()
+	try:
+		html = html.replace("var tumblr_api_read = ","")
+		html = html.replace(";","")
+		jdata = json.loads(html)
+	except:
+		print(html)
+		print("error parsing json")
+		sys.exit()
+
+	def download_image(url,sub = False):
+		name  = url.split('/')[-1]
+		nameF = args["name"]+"_"+name
+
+		if os.path.isfile(nameF):
+			print("Already Downloaded Skipping")
+		else:
+			urllib.urlretrieve(url,args["name"]+"_"+name)
+			print("100% " + name)
+
+	for post in jdata["posts"]:
+		try:
+			download_image(post["photo-url-1280"])
+			for sub in post["photos"]:
+				download_image(sub["photo-url-1280"])
+		except:
+			print("Failed Downloading post")
+

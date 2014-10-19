@@ -1,0 +1,99 @@
+#!/usr/bin/env python2
+# -*- coding: utf-8 -*-
+import json,urllib,argparse,sys,os,wx,threading
+appz = wx.App(False)
+class TumGet ( wx.Frame ):
+	
+	def __init__( self, parent ):
+		wx.Frame.__init__ ( self, parent, id = wx.ID_ANY, title = wx.EmptyString, pos = wx.DefaultPosition, size = wx.Size( 500,300 ), style = wx.DEFAULT_FRAME_STYLE|wx.TAB_TRAVERSAL )
+		
+		self.SetSizeHintsSz( wx.DefaultSize, wx.DefaultSize )
+		
+		bSizer1 = wx.BoxSizer( wx.VERTICAL )
+		
+		bSizer2 = wx.BoxSizer( wx.HORIZONTAL )
+		
+		self.blog_name = wx.TextCtrl( self, wx.ID_ANY, u"blog name", wx.DefaultPosition, wx.DefaultSize, 0 )
+		bSizer2.Add( self.blog_name, 1, wx.ALL, 5 )
+		
+		self.noPages = wx.SpinCtrl( self, wx.ID_ANY, u"1", wx.DefaultPosition, wx.DefaultSize, wx.SP_ARROW_KEYS, 1, 10, 0 )
+		bSizer2.Add( self.noPages, 0, wx.ALL, 5 )
+		
+		self.saveDir = wx.DirPickerCtrl( self, wx.ID_ANY, wx.EmptyString, u"Select a folder", wx.DefaultPosition, wx.DefaultSize, wx.DIRP_DEFAULT_STYLE )
+		bSizer2.Add( self.saveDir, 0, wx.ALL, 5 )
+		
+		self.download = wx.Button( self, wx.ID_ANY, u"GetIt", wx.DefaultPosition, wx.DefaultSize, 0 )
+		bSizer2.Add( self.download, 0, wx.ALL, 5 )
+		
+		bSizer1.Add( bSizer2, 0, wx.EXPAND, 5 )
+		
+		self.verbose_ = wx.TextCtrl( self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, wx.TE_MULTILINE )
+		bSizer1.Add( self.verbose_, 1, wx.ALL|wx.EXPAND, 5 )
+		
+		bSizer3 = wx.BoxSizer( wx.HORIZONTAL )
+		
+		self.m_staticText2 = wx.StaticText( self, wx.ID_ANY, u"Made By Kaveen Rodrigo, OpenSource Software ", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_staticText2.Wrap( -1 )
+		bSizer3.Add( self.m_staticText2, 0, wx.ALL, 5 )
+		
+		self.m_hyperlink1 = wx.HyperlinkCtrl( self, wx.ID_ANY, u"my blog", u"http://www.geeknirvana.org", wx.DefaultPosition, wx.DefaultSize, wx.HL_DEFAULT_STYLE )
+		bSizer3.Add( self.m_hyperlink1, 0, wx.ALL, 5 )
+		
+		bSizer1.Add( bSizer3, 0, wx.EXPAND, 5 )
+		
+		self.SetSizer( bSizer1 )
+		self.Layout()
+		
+		self.Centre( wx.BOTH )
+		
+		self.download.Bind( wx.EVT_BUTTON, self.down_blog )
+	
+	def __del__( self ):
+		pass
+	
+	
+	def down_blog( self, event ):
+		self.MainThread = threading.Thread(target=self.downIt,args=(str(self.blog_name.GetValue()),int(self.noPages.GetValue()),str(self.saveDir.GetPath()),))
+		self.MainThread.start()
+		
+	def downIt(self,p_name,pages,dest):
+		self.verbose("Starting...");
+		for page in range(1,pages+1):
+			try:
+				if page == 1:
+					html = urllib.urlopen("http://"+p_name+".tumblr.com/api/read/json").read()
+				else:
+					html = urllib.urlopen("http://"+p_name+".tumblr.com/api/read/json?start="+str((page - 1)*20)).read()
+			except:
+				self.verbose("error reciving data")
+			try:
+				html = html.replace("var tumblr_api_read = ","")
+				html = html.replace(";","")
+				jdata = json.loads(html)
+			except:
+				self.verbose("error parsing json")
+
+			for post in jdata["posts"]:
+				try:
+					self.download_image(post["photo-url-1280"],p_name,dest)
+					for sub in post["photos"]:
+						self.download_image(sub["photo-url-1280"],p_name,dest)
+				except:
+					self.verbose("Failed Downloading post")
+					
+	def verbose(self,text):
+		self.verbose_.AppendText(text.encode('utf-8')+"\n")
+		
+	def download_image(self,url,p_name,dest):
+		name  = url.split('/')[-1]
+		nameF = p_name+"_"+name
+
+		if os.path.isfile(dest+"/"+nameF):
+			self.verbose("Already Downloaded Skipping")
+		else:
+			urllib.urlretrieve(url,dest+"/"+p_name+"_"+name)
+			self.verbose("100% " + name)
+
+main = TumGet(None)
+main.Show(True)		
+appz.MainLoop()
